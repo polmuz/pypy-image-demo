@@ -16,7 +16,7 @@ class ColorImage(Image):
             self.color_data.fromfile(fromfile, (w * h) / 2)
         else:
             self.data = array(typecode, [0]) * (w * h)
-            self.color_data = (array.array('B', [127]) *
+            self.color_data = (array('B', [127]) *
                                (w * h / 2))
 
         self.typecode = typecode
@@ -99,9 +99,12 @@ if __name__ == '__main__':
     import sys
     from time import time
 
-    fn = 'test.avi -vf scale=640:480 -benchmark'
+    if len(sys.argv) > 1:
+        fn = sys.argv[1]
+    else:
+        fn = 'test.avi -vf scale=640:480 -benchmark'
 
-    sys.setcheckinterval(2**30)
+    sys.setcheckinterval(2 ** 30)
     try:
         import pypyjit
         pypyjit.set_param(trace_limit=200000)
