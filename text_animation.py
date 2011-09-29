@@ -116,10 +116,10 @@ def create_array_mask(text="PyPy Rocks!", **kargs):
     msk_x, msk_y = mask.size
     print "-->",mask.size
     arraymask = ColorImage(msk_x, msk_y, typecode='B')
-    color = RGB2YCbCr(color)
+    colorMask = RGB2YCbCr(color)
     for x in range(msk_x):
         for y in range(msk_y):
-            arraymask[x, y] = paint(mask.getpixel((x, y)), color)
+            arraymask[x, y] = paint(mask.getpixel((x, y)), colorMask)
     return arraymask
 
 arraymask = create_array_mask("Soy Manu", size=int(sys.argv[1]))#fontfile="/usr/share/fonts/truetype/freefont/FreeMono.ttf")
@@ -151,8 +151,8 @@ if __name__ == '__main__':
     import sys
     from time import time
 
-    if len(sys.argv) > 1:
-        fn = sys.argv[1]
+    if len(sys.argv) > 2:
+        fn = sys.argv[2]
     else:
         fn = 'test.mpg -vf scale=640:480 -benchmark'
 
