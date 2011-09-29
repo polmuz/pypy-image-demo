@@ -1,6 +1,6 @@
 import errno
 from array import array
-import os, re
+import os, re, sys
 
 from plain import Image
 
@@ -17,7 +17,7 @@ class ColorImage(Image):
         else:
             self.data = array(typecode, [0]) * (w * h)
             self.color_data = (array('B', [127]) *
-                               (w * h / 2))
+                               ((w * h) / 2))
         self.typecode = typecode
 
     def _idx(self, x, y):
@@ -34,14 +34,14 @@ class ColorImage(Image):
         total = self.width * self.height
         Y = self.data[self._idx(x, y)]
         Cb = self.color_data[self._idxy(x, y)]
-        Cr = self.color_data[self._idxy(x, y)+len(self.color_data)/2]
+        Cr = self.color_data[self._idxy(x, y)+total/4]
         return (Y, Cb, Cr)
 
     def __setitem__(self, (x, y), (Y, Cb, Cr)):
         total = self.width * self.height
         self.data[self._idx(x, y)] = Y
         self.color_data[self._idxy(x, y)] = Cb
-        self.color_data[self._idxy(x, y)+len(self.color_data)/2] = Cr
+        self.color_data[self._idxy(x, y)+total/4] = Cr
 
     def tofile(self, f):
         self.data.tofile(f)
@@ -86,14 +86,17 @@ default_viewer = ColorMplayerViewer()
 
 from PIL import ImageFont, ImageColor
 
-def RGB2YCbCr(mask, color):
-    if not mask:
-        return (255, 255, 255) #This is our transparency constant
+def RGB2YCbCr(color):
     (R, G, B) = ImageColor.getrgb(color)
     Y  = R *  0.29900 + G *  0.58700 + B *  0.11400
     Cb = R * -0.16874 + G * -0.33126 + B *  0.50000 + 128
     Cr = R *  0.50000 + G * -0.41869 + B * -0.08131 + 128
     return (int(Y), int(Cb), int(Cr))
+
+def paint(pixel_mask, color):
+    if pixel_mask:
+        return color
+    return (255, 255, 255) #This is our transparency constant
 
 def create_array_mask(text="PyPy Rocks!", **kargs):
     try:
@@ -111,14 +114,15 @@ def create_array_mask(text="PyPy Rocks!", **kargs):
     font = ImageFont.truetype(fontfile, size)
     mask = font.getmask(text)
     msk_x, msk_y = mask.size
+    print "-->",mask.size
     arraymask = ColorImage(msk_x, msk_y, typecode='B')
+    color = RGB2YCbCr(color)
     for x in range(msk_x):
         for y in range(msk_y):
-            print (x,y)
-            arraymask[x, y] = RGB2YCbCr(mask.getpixel((x, y)), color)
+            arraymask[x, y] = paint(mask.getpixel((x, y)), color)
     return arraymask
 
-arraymask = create_array_mask("Soy Manu", fontfile="/usr/share/fonts/truetype/ttf-liberation/LiberationMono-Bold.ttf")
+arraymask = create_array_mask("Soy Manu", size=int(sys.argv[1]))#fontfile="/usr/share/fonts/truetype/freefont/FreeMono.ttf")
 
 counter = 0
 
@@ -150,7 +154,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         fn = sys.argv[1]
     else:
-        fn = 'test.avi -vf scale=640:480 -benchmark'
+        fn = 'test.mpg -vf scale=640:480 -benchmark'
 
     sys.setcheckinterval(2 ** 30)
     try:
