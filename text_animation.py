@@ -108,21 +108,20 @@ def create_array_mask(text="PyPy Rocks!", **kargs):
     except:
         size = 100
     try:
-        color = kargs["color"]
+        colorMask = RGB2YCbCr("#"+kargs["color"])
     except:
-        color = "#FFFF00"
+        colorMask = RGB2YCbCr("#FFFF00")
     font = ImageFont.truetype(fontfile, size)
     mask = font.getmask(text)
     msk_x, msk_y = mask.size
-    print "-->",mask.size
     arraymask = ColorImage(msk_x, msk_y, typecode='B')
-    colorMask = RGB2YCbCr(color)
     for x in range(msk_x):
         for y in range(msk_y):
             arraymask[x, y] = paint(mask.getpixel((x, y)), colorMask)
     return arraymask
 
-arraymask = create_array_mask("Soy Manu", size=int(sys.argv[1]))#fontfile="/usr/share/fonts/truetype/freefont/FreeMono.ttf")
+
+arraymask = create_array_mask("Soy Manu", size=int(sys.argv[1]), color=sys.argv[3])#fontfile="/usr/share/fonts/truetype/freefont/FreeMono.ttf")
 
 counter = 0
 
