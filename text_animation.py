@@ -18,8 +18,30 @@ class ColorImage(Image):
             self.data = array(typecode, [0]) * (w * h)
             self.color_data = (array('B', [127]) *
                                (w * h / 2))
-
         self.typecode = typecode
+
+    def _idx(self, x, y):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            return y*self.width + x
+        raise IndexError
+
+    def _idxy(self, x, y):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            return y/2*self.width/2 + x/2
+        raise IndexError
+
+    def __getitem__(self, (x, y)):
+        total = self.width * self.height
+        Y = self.data[self._idx(x, y)]
+        Cb = self.color_data[self._idxy(x, y)]
+        Cr = self.color_data[self._idxy(x, y)+len(self.color_data)/2]
+        return (Y, Cb, Cr)
+
+    def __setitem__(self, (x, y), (Y, Cb, Cr)):
+        total = self.width * self.height
+        self.data[self._idx(x, y)] = Y
+        self.color_data[self._idxy(x, y)] = Cb
+        self.color_data[self._idxy(x, y)+len(self.color_data)/2] = Cr
 
     def tofile(self, f):
         self.data.tofile(f)
@@ -62,20 +84,42 @@ class ColorMplayerViewer(object):
 default_viewer = ColorMplayerViewer()
 
 
-from PIL import ImageFont
+from PIL import ImageFont, ImageColor
 
+def RGB2YCbCr(mask, color):
+    if not mask:
+        return (255, 255, 255) #This is our transparency constant
+    (R, G, B) = ImageColor.getrgb(color)
+    Y  = R *  0.29900 + G *  0.58700 + B *  0.11400
+    Cb = R * -0.16874 + G * -0.33126 + B *  0.50000 + 128
+    Cr = R *  0.50000 + G * -0.41869 + B * -0.08131 + 128
+    return (int(Y), int(Cb), int(Cr))
 
-def create_array_mask():
-    font = ImageFont.truetype("game_over.ttf", 100)
-    mask = font.getmask("PyPy Rocks!")
+def create_array_mask(text="PyPy Rocks!", **kargs):
+    try:
+        fontfile = kargs["fontfile"]
+    except:
+        fontfile = "game_over.ttf"
+    try:
+        size = kargs["size"]
+    except:
+        size = 100
+    try:
+        color = kargs["color"]
+    except:
+        color = "#FFFF00"
+    font = ImageFont.truetype(fontfile, size)
+    mask = font.getmask(text)
     msk_x, msk_y = mask.size
-    arraymask = Image(msk_x, msk_y, typecode='B')
+    arraymask = ColorImage(msk_x, msk_y, typecode='B')
     for x in range(msk_x):
         for y in range(msk_y):
-            arraymask[x, y] = mask.getpixel((x, y))
+            print (x,y)
+            arraymask[x, y] = RGB2YCbCr(mask.getpixel((x, y)), color)
     return arraymask
 
-arraymask = create_array_mask()
+arraymask = create_array_mask("Soy Manu", fontfile="/usr/share/fonts/truetype/ttf-liberation/LiberationMono-Bold.ttf")
+
 counter = 0
 
 
@@ -86,9 +130,13 @@ def apply_text(img):
         for y in range(arraymask.height):
             if 0 < (x - arraymask.width + (counter % 500) * 2) < w \
                and y < h \
-               and arraymask[x, y] != 0:
-                img[x - arraymask.width + (counter % 500) * 2,
+               and arraymask[x, y] != (255, 255, 255):
+                img[x - arraymask.width + (counter % 500) * 2, #TODO: remove 500 magic number
                     y] = arraymask[x, y]
+    out = ColorImage(w, h, typecode='B')
+    for x in range(img.width):
+        for y in range(img.height):
+            out[x, y] = img[x, y]
     global counter
     counter += 1
     return img
